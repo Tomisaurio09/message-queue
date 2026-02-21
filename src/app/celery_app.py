@@ -1,10 +1,10 @@
 from celery import Celery
-
+import os
 
 celery = Celery(
     "worker",
-    broker="amqp://guest:guest@rabbitmq:5672//",
-    backend="rpc://"
+    broker=os.getenv("CELERY_BROKER_URL"),
+    backend=os.getenv("CELERY_RESULT_BACKEND")
 )
 
 
