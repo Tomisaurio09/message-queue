@@ -9,9 +9,10 @@ services:
       - postgres
       - rabbitmq
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=${DATABASE_URL_DOCKER}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - DEBUG=${DEBUG}
     ports:
       - "8000:8000"
 
@@ -25,8 +26,10 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      - DATABASE_URL=${DATABASE_URL_DOCKER}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - DEBUG=${DEBUG}
 
   rabbitmq:
     image: rabbitmq:3-management
