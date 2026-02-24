@@ -33,11 +33,17 @@ def enqueue_add(x: int, y: int, db: Session = Depends(get_db)):
     return {"task_id": result.id, "status": task.status}
     
 
+@app.post("/tasks/unstable")
+def enqueue_unstable(db: Session = Depends(get_db)):
+    result = celery.send_task("src.app.celery_app.unstable_task")
+    return {"task_id": result.id}
+
+
 @app.get("/tasks/{task_id}")
 def get_task_status(task_id: str, db: Session = Depends(get_db)):
     task = db.query(Task).filter(Task.id == task_id).first()
-    if not task:
-        return {"error": "Task not found"}
+    #if not task:
+    #   return {"error": "Task not found"}
     return {
         "task_id": task.id,
         "status": task.status,
