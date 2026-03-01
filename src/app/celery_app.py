@@ -4,13 +4,30 @@ from sqlalchemy.orm import Session
 from src.app.core.db import SessionLocal
 from src.app.models.task import Task
 from src.app.core.config import settings
+from kombu import Exchange, Queue
+from src.app.models.image import Image
+from PIL import Image as PILImage
+import os
+from src.app.core.config import PROCESSED_DIR
+task_queues = (
+    Queue("image_queue", Exchange("tasks"), routing_key="image.#"),
+    Queue("email_queue", Exchange("tasks"), routing_key="email.#"),
+)
 
-celery = Celery("worker", broker=settings.CELERY_BROKER_URL,
-                backend=settings.CELERY_RESULT_BACKEND,
-                task_acks_late=True, # Ensure tasks are acknowledged after completion
-                worker_prefetch_multiplier=1) # Prevent worker from prefetching multiple tasks
+celery = Celery(
+    "worker",
+    broker=settings.CELERY_BROKER_URL,
+    backend=settings.CELERY_RESULT_BACKEND,
+)
 
-@celery.task(bind=True, name="src.app.celery_app.add")
+#Aditionals Celery configuration
+celery.conf.update(
+    task_acks_late=True,
+    worker_prefetch_multiplier=1,
+    task_queues=task_queues,
+)
+
+@celery.task(bind=True)
 def add(self, x, y):
     db: Session = SessionLocal()
     try:
@@ -38,4 +55,33 @@ def unstable_task(self):
         raise Exception("fail")
     except Exception as exc:
         raise self.retry(exc=exc, countdown=5)
+
+
+
+@celery.task(queue="image_queue", routing_key="image.process")
+def process_image(image_id: str, max_retries=3):
+    db = SessionLocal()
+    image = db.query(Image).filter(Image.id == image_id).first()
+    if not image:
+        return
+
+    try:
+        with PILImage.open(image.path) as img:
+            resized = img.resize((800, 600))
+            thumb = img.copy()
+            thumb.thumbnail((200, 200))
+
+            processed_path = os.path.join(PROCESSED_DIR, image.filename)
+            resized.save(processed_path)
+
+            image.processed_path = processed_path
+            image.status = "SUCCESS"
+            db.commit()
+    except Exception as e:
+        image.status = "FAILURE"
+        db.commit()
+        print(f"Error procesando imagen {image.id}: {e}")
+
+    finally:
+        db.close()
 

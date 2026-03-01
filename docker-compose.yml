@@ -3,6 +3,7 @@ version: "3.9"
 services:
   api:
     build: .
+    working_dir: /app
     container_name: api
     command: uvicorn src.app.main:app --host 0.0.0.0 --port 8000
     depends_on:
@@ -15,6 +16,10 @@ services:
       - DEBUG=${DEBUG}
     ports:
       - "8000:8000"
+    volumes: 
+      - ./src/app/uploads:/app/uploads 
+      - ./src/app/processed:/app/processed
+    
 
   worker:
     build: .
@@ -30,7 +35,10 @@ services:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
       - DEBUG=${DEBUG}
-
+    volumes: 
+      - ./src/app/uploads:/app/uploads 
+      - ./src/app/processed:/app/processed
+      
   rabbitmq:
     image: rabbitmq:3-management
     volumes:

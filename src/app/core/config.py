@@ -1,6 +1,13 @@
 # app/core/config.py
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
+
+UPLOAD_DIR = "/app/uploads"
+PROCESSED_DIR = "/app/processed"
+
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(PROCESSED_DIR, exist_ok=True)
 
 
 

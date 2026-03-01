@@ -6,7 +6,7 @@ import os
 from alembic import context
 from src.app.core.db import Base
 from src.app.core.config import settings
-from src.app.models.task import Task
+from src.app import models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

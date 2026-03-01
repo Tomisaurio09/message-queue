@@ -61,3 +61,10 @@ pip-delete-this-directory.txt
 
 # Archivos de seguridad
 secrets.json
+# Imágenes subidas y procesadas
+src/app/uploads/
+src/app/processed/
+
+# Imágenes subidas y procesadas
+/app/uploads/
+/app/processed/

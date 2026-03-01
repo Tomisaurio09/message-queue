@@ -16,7 +16,7 @@ from typing import Any, Optional
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import Enum as SqlEnum
 from datetime import datetime, timezone
-from ..core.db import Base
+from src.app.core.db import Base
 from pydantic import BaseModel
 import uuid 
 
