@@ -14,6 +14,9 @@ services:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
       - DEBUG=${DEBUG}
+      - MAIL_SERVER=${MAIL_SERVER}
+      - MAIL_PORT=${MAIL_PORT} 
+      - MAIL_FROM=${MAIL_FROM}
     ports:
       - "8000:8000"
     volumes: 
@@ -35,6 +38,9 @@ services:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
       - DEBUG=${DEBUG}
+      - MAIL_SERVER=${MAIL_SERVER}
+      - MAIL_PORT=${MAIL_PORT} 
+      - MAIL_FROM=${MAIL_FROM}
     volumes: 
       - ./src/app/uploads:/app/uploads 
       - ./src/app/processed:/app/processed
@@ -43,10 +49,15 @@ services:
     image: rabbitmq:3-management
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      - ./infra/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
     container_name: rabbitmq
     ports:
       - "5672:5672"   
       - "15672:15672" 
+    environment: 
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_LOAD_DEFINITIONS: /etc/rabbitmq/definitions.json
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
       interval: 30s
@@ -80,11 +91,19 @@ services:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
       - DEBUG=${DEBUG}
+      - MAIL_SERVER=${MAIL_SERVER}
+      - MAIL_PORT=${MAIL_PORT} 
+      - MAIL_FROM=${MAIL_FROM}
     depends_on:
       rabbitmq: 
         condition: service_healthy
       postgres: 
         condition: service_healthy
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
 
 volumes:
   postgres_data:

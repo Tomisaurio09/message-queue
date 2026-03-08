@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str
     CELERY_RESULT_BACKEND: str
 
+
+    MAIL_SERVER: str
+    MAIL_PORT: int 
+    MAIL_FROM: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True,

@@ -10,6 +10,7 @@ dependencies = [
     "celery>=5.6.2",
     "fastapi>=0.129.0",
     "flower>=2.0.1",
+    "mailhog>=0.1.1",
     "pillow>=12.1.1",
     "psycopg2-binary>=2.9.11",
     "pydantic-settings>=2.13.1",

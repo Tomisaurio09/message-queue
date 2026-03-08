@@ -1,0 +1,46 @@
+{
+  "queues": [
+    {
+      "name": "image_queue",
+      "vhost": "/",
+      "durable": true,
+      "arguments": {
+        "x-dead-letter-exchange": "dlx_exchange"
+      }
+    },
+    {
+      "name": "dead_letter_queue",
+      "vhost": "/",
+      "durable": true
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "tasks",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true
+    },
+    {
+      "name": "dlx_exchange",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true
+    }
+  ],
+  "bindings": [
+    {
+      "source": "tasks",
+      "destination": "image_queue",
+      "destination_type": "queue",
+      "routing_key": "image.#"
+    },
+    {
+      "source": "dlx_exchange",
+      "destination": "dead_letter_queue",
+      "destination_type": "queue",
+      "routing_key": ""
+    }
+  ]
+}
+

@@ -1,9 +1,9 @@
 # src/app/main.py
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.app.core.db import SessionLocal
 from src.app.models.task import Task
-from src.app.celery_app import celery, add, unstable_task, process_image
+from src.app.celery_app import celery, add, unstable_task, process_image, send_email
 import json
 from fastapi import UploadFile, File, Depends
 from sqlalchemy.orm import Session
@@ -46,8 +46,8 @@ def enqueue_unstable(db: Session = Depends(get_db)):
 @app.get("/tasks/{task_id}")
 def get_task_status(task_id: str, db: Session = Depends(get_db)):
     task = db.query(Task).filter(Task.id == task_id).first()
-    #if not task:
-    #   return {"error": "Task not found"}
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
     return {
         "task_id": task.id,
         "status": task.status,
@@ -67,12 +67,27 @@ def upload_image(file: UploadFile = File(...), db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_image)
 
+    
     return {"id": str(new_image.id), "filename": new_image.filename, "status": new_image.status}
 
 
 #necesitas los dos endpoints
 @app.post("/images/{image_id}/process")
 def enqueue_process_image(image_id: str, db: Session = Depends(get_db)):
+    
+    image = db.query(Image).filter(Image.id == image_id).first()
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    if image.status == "SUCCESS":
+        raise HTTPException(status_code=400, detail="Image already processed")
+    if image.status in ["PENDING", "STARTED"]:
+        raise HTTPException(status_code=400, detail="Image already in process")
+
+    # Si estaba en FAILED, lo reintentamos
+    if image.status == "FAILURE":
+        image.status = "RETRY"
+        db.commit()
     result = process_image.delay(image_id)
 
     task = Task(
@@ -85,5 +100,6 @@ def enqueue_process_image(image_id: str, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(task)
 
+    send_email.delay( "user@example.com", "Tu imagen está lista", f"La imagen {result.id} ya fue procesada." )
     return {"task_id": result.id, "status": task.status}
 

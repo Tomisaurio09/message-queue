@@ -9,10 +9,31 @@ from src.app.models.image import Image
 from PIL import Image as PILImage
 import os
 from src.app.core.config import PROCESSED_DIR
-task_queues = (
-    Queue("image_queue", Exchange("tasks"), routing_key="image.#"),
-    Queue("email_queue", Exchange("tasks"), routing_key="email.#"),
+import smtplib
+from email.mime.text import MIMEText
+
+
+tasks_exchange = Exchange("tasks", type="direct")
+
+image_queue = Queue(
+    "image_queue",
+    exchange=tasks_exchange,
+    routing_key="image.#",
+    queue_arguments={
+        "x-dead-letter-exchange": "dlx_exchange"
+    }
 )
+
+email_queue = Queue(
+    "email_queue",
+    exchange=tasks_exchange,
+    routing_key="email.#",
+    queue_arguments={
+        "x-dead-letter-exchange": "dlx_exchange"
+    }
+)
+
+task_queues = (image_queue, email_queue)
 
 celery = Celery(
     "worker",
@@ -85,3 +106,13 @@ def process_image(image_id: str, max_retries=3):
     finally:
         db.close()
 
+#captura todos los mails que manda la app
+@celery.task(queue="email_queue")
+def send_email(to, subject, body):
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = settings.MAIL_FROM
+    msg["To"] = to
+
+    with smtplib.SMTP(settings.MAIL_SERVER, settings.MAIL_PORT) as server:
+        server.send_message(msg)
