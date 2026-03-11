@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from src.app.models.image import Image
 import os
 from src.app.core.config import UPLOAD_DIR
+from celery import chain
+
 
 app = FastAPI()
 
@@ -88,8 +90,11 @@ def enqueue_process_image(image_id: str, db: Session = Depends(get_db)):
     if image.status == "FAILURE":
         image.status = "RETRY"
         db.commit()
-    result = process_image.delay(image_id)
-
+    workflow = chain(
+        process_image.s(image_id),
+        send_email.s("user@example.com", "Tu imagen está lista", f"La imagen ya fue procesada.")
+    )
+    result = workflow()
     task = Task(
         id=result.id,
         status="PENDING",
@@ -100,6 +105,5 @@ def enqueue_process_image(image_id: str, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(task)
 
-    send_email.delay( "user@example.com", "Tu imagen está lista", f"La imagen {result.id} ya fue procesada." )
     return {"task_id": result.id, "status": task.status}
 

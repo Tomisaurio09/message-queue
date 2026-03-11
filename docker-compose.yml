@@ -49,15 +49,15 @@ services:
     image: rabbitmq:3-management
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-      - ./infra/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
-    container_name: rabbitmq
+      - ./src/app/infra/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json  
+      - ./src/app/infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf  # <- agregar
+
     ports:
       - "5672:5672"   
       - "15672:15672" 
     environment: 
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
-      RABBITMQ_LOAD_DEFINITIONS: /etc/rabbitmq/definitions.json
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
       interval: 30s

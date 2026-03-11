@@ -1,46 +1,116 @@
 {
-  "queues": [
+  "rabbit_version": "3.13.7",
+  "rabbitmq_version": "3.13.7",
+  "users": [
     {
-      "name": "image_queue",
-      "vhost": "/",
-      "durable": true,
-      "arguments": {
-        "x-dead-letter-exchange": "dlx_exchange"
-      }
-    },
-    {
-      "name": "dead_letter_queue",
-      "vhost": "/",
-      "durable": true
+      "name": "guest",
+      "password": "guest",
+      "tags": "administrator"
     }
+  ],
+  "permissions": [
+    {
+      "user": "guest",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "vhosts": [
+    { "name": "/" }
   ],
   "exchanges": [
     {
       "name": "tasks",
       "vhost": "/",
       "type": "direct",
-      "durable": true
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
     },
     {
       "name": "dlx_exchange",
       "vhost": "/",
       "type": "direct",
-      "durable": true
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "default_queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dlx_exchange",
+        "x-dead-letter-routing-key": "dead"
+      }
+    },
+    {
+      "name": "image_queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dlx_exchange",
+        "x-dead-letter-routing-key": "dead"
+      }
+    },
+    {
+      "name": "email_queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dlx_exchange",
+        "x-dead-letter-routing-key": "dead"
+      }
+    },
+    {
+      "name": "dead_letter_queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
     }
   ],
   "bindings": [
     {
       "source": "tasks",
+      "vhost": "/",
+      "destination": "default_queue",
+      "destination_type": "queue",
+      "routing_key": "default",
+      "arguments": {}
+    },
+    {
+      "source": "tasks",
+      "vhost": "/",
       "destination": "image_queue",
       "destination_type": "queue",
-      "routing_key": "image.#"
+      "routing_key": "image.process",
+      "arguments": {}
+    },
+    {
+      "source": "tasks",
+      "vhost": "/",
+      "destination": "email_queue",
+      "destination_type": "queue",
+      "routing_key": "email.send",
+      "arguments": {}
     },
     {
       "source": "dlx_exchange",
+      "vhost": "/",
       "destination": "dead_letter_queue",
       "destination_type": "queue",
-      "routing_key": ""
+      "routing_key": "dead",
+      "arguments": {}
     }
   ]
 }
-

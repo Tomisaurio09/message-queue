@@ -11,29 +11,43 @@ import os
 from src.app.core.config import PROCESSED_DIR
 import smtplib
 from email.mime.text import MIMEText
+from celery.exceptions import Reject
+
 
 
 tasks_exchange = Exchange("tasks", type="direct")
 
+default_queue = Queue(
+    "default_queue",
+    exchange=tasks_exchange,
+    routing_key="default",
+    queue_arguments={
+        "x-dead-letter-exchange": "dlx_exchange",
+        "x-dead-letter-routing-key": "dead"   # <-- faltaba esto
+    }
+)
+
 image_queue = Queue(
     "image_queue",
     exchange=tasks_exchange,
-    routing_key="image.#",
+    routing_key="image.process",
     queue_arguments={
-        "x-dead-letter-exchange": "dlx_exchange"
+        "x-dead-letter-exchange": "dlx_exchange",
+        "x-dead-letter-routing-key": "dead"   # <-- faltaba esto
     }
 )
 
 email_queue = Queue(
     "email_queue",
     exchange=tasks_exchange,
-    routing_key="email.#",
+    routing_key="email.send",
     queue_arguments={
-        "x-dead-letter-exchange": "dlx_exchange"
+        "x-dead-letter-exchange": "dlx_exchange",
+        "x-dead-letter-routing-key": "dead"
     }
 )
 
-task_queues = (image_queue, email_queue)
+task_queues = (default_queue, image_queue, email_queue)
 
 celery = Celery(
     "worker",
@@ -46,6 +60,9 @@ celery.conf.update(
     task_acks_late=True,
     worker_prefetch_multiplier=1,
     task_queues=task_queues,
+    task_default_queue="default_queue",       # <-- esto hace que unstable_task use default_queue
+    task_default_exchange="tasks",
+    task_default_routing_key="default",
 )
 
 @celery.task(bind=True)
@@ -70,14 +87,14 @@ def add(self, x, y):
 
 # Example of a task that simulates failure and retries
 # Countdown is set to 5 seconds before retrying, and it will retry up to 3 times before giving up.
-@celery.task(bind=True, max_retries=3)
+@celery.task(bind=True, max_retries=3, acks_late=True)
 def unstable_task(self):
     try:
-        raise Exception("fail")
+        raise Exception("Simulated failure")
     except Exception as exc:
+        if self.request.retries >= self.max_retries:
+            raise Reject(exc, requeue=False)  # → va al DLX
         raise self.retry(exc=exc, countdown=5)
-
-
 
 @celery.task(queue="image_queue", routing_key="image.process")
 def process_image(image_id: str, max_retries=3):
